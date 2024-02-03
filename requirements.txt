@@ -1,0 +1,5 @@
+fastapi 
+PyPDF2 
+pydentic 
+uvicorn 
+chromadb
