@@ -1,3 +1,6 @@
 .assignment_env/
 __pycache__/
 .assignment_env/
+.spyproject/
+.ipynb_checkpoints/
+.conda/
