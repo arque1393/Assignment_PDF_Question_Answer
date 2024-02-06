@@ -1,6 +1,12 @@
-.assignment_env/
 __pycache__/
 .assignment_env/
 .spyproject/
 .ipynb_checkpoints/
 .conda/
+Knowledge_space/
+tmp/
+cache_dir/
+VectorDB/
+tmp/
+chroma.log
+*.db
