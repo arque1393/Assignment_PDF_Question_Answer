@@ -20,15 +20,16 @@ def save_upload_file(upload_file: UploadFile, destination: Path) -> None:
         upload_file.file.close()
         
 app = FastAPI()
-@app.post("/api/user/", response_model=UserShow)
+@app.post("/api/user", response_model=UserShow)
 async def create_user(usr:User, session:Session = Depends(get_session)):
     existing_object = session.query(db_models.User).filter_by(username=usr.username).first()
     if existing_object:
-        raise HTTPException(status_code=400, detail='Email is already taken')    
+        raise HTTPException(status_code=400, detail='Username is already taken')    
     new_user = db_models.User(username = usr.username, _password = usr.password)
     session.add(new_user)
     session.commit()
     session.refresh(new_user)
+    print(new_user)
     return new_user
     
 @app.post("/api/user/{user_id}/upload_pdf")
@@ -46,7 +47,7 @@ async def post_endpoint(user_id:int, session:Session=Depends(get_session), in_fi
     
     return {"Result": "OK"}
 
-@app.post("/api/user/{user_id}/store/")
+@app.post("/api/user/{user_id}/store")
 async def add_on_vector_db(user_id:int, upload_info:UploadInfo,
                     session:Session = Depends(get_session)):
     user =  session.query(db_models.User).filter_by(user_id=user_id).first()
