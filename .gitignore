@@ -10,3 +10,5 @@ VectorDB/
 tmp/
 chroma.log
 *.db
+FileStore/
+ChromaDB/
