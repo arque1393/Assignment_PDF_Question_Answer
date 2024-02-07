@@ -69,15 +69,15 @@ async def get_all_collections(user_id:int,session:Session = Depends(get_session)
 
 @app.post("/api/user/{user_id}/ask/")
 async def ask_question(user_id:int, ask_info:AskInfo,
-                    session:Session = Depends(get_session)):
+                    session:Session = Depends(get_session)) :
     user =  session.query(db_models.User).filter_by(user_id=user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail='User Not Found')  
     user_name = user.username
+    if not ask_info.collection_name:
+        ask_info.collection_name='default'
     try:
-        if not ask_info.collection_name:
-            ask_info.collection_name='default'
         answer = get_answer(question=ask_info.question, username=user_name, collection=ask_info.collection_name)
         return {'question':ask_info.question, 'answer':answer}
     except Exception as e:
-        raise HTTPException(e)
+        raise HTTPException(status_code=404,detail=str(e))

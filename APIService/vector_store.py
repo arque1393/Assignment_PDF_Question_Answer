@@ -60,7 +60,13 @@ def get_collection_list(username : str):
 
 def get_retriever(username : str, collection:str):
     persist_dir = DATABASE_PATH/username
+    if not persist_dir.exists():
+        raise Exception(f"No directorr found as {username} ")
     client = chromadb.PersistentClient(str(persist_dir.resolve()))
+    try:
+        client.get_collection(collection)
+    except:
+        raise Exception(f"Collection {collection} not Found with this user {username}")
     chroma =  Chroma(
         client=client,
         collection_name=collection,
@@ -69,7 +75,9 @@ def get_retriever(username : str, collection:str):
     return chroma.as_retriever()
 
 def get_answer(question:str,username:str, collection: str):
+   
     retriever = get_retriever(username,collection)
+
     ## Retrive content form Document 
     docs = retriever.get_relevant_documents(question)
     
