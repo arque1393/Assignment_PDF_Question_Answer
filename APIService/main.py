@@ -10,12 +10,24 @@ import db_models
 from config import DATABASE_PATH, FILE_STORE_PATH
 
 from vector_store import upload_on_vector_db, get_answer,get_collection_list
-
-db_models.Base.metadata.create_all(engine)
+# Creating or updating table structure on User Database
+db_models.Base.metadata.create_all(engine) 
 def save_upload_file(upload_file: UploadFile, destination: Path) -> None:
+    """
+    This function write a file in physical  drive from FastAPI Upload File object
+    Args:
+        upload_file (UploadFile): FastAPI UploadFIle object
+        destination (Path): The pathlib.Path object of the spesific location 
+    Return: 
+        Boolean True on success and False on failure 
+    """
     try:
         with destination.open("wb") as buffer:
             shutil.copyfileobj(upload_file.file, buffer)
+        return True
+    except Exception as e: 
+        print(e)
+        return False
     finally:
         upload_file.file.close()
         
@@ -67,7 +79,12 @@ async def get_all_collections(user_id:int,session:Session = Depends(get_session)
         raise HTTPException(status_code=404, detail='User Not Found')  
     user_name = user.username
     return get_collection_list(user_name)
-
+@app.delete("/api/user/{user_id}/{collection}")
+async def delete_collection(user_id:str, collection:str, session:Session = Depends(get_session)):
+    user =  session.query(db_models.User).filter_by(user_id=user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail='User Not Found')  
+    delete_collection(username=user.username, collection=collection)
 @app.post("/api/user/{user_id}/ask/")
 async def ask_question(user_id:int, ask_info:AskInfo,
                     session:Session = Depends(get_session)) :

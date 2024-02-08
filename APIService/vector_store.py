@@ -2,6 +2,7 @@ from pathlib import Path
 from langchain_community.embeddings.sentence_transformer import (
     SentenceTransformerEmbeddings,
 )
+from langchain_google_genai import GoogleGenerativeAIEmbeddings
 
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain.text_splitter import RecursiveCharacterTextSplitter
@@ -25,9 +26,21 @@ genai.configure(api_key=GOOGLE_API_KEY)
 
 # Creating Embedding Function
 embedding_function = SentenceTransformerEmbeddings(model_name="all-MiniLM-L6-v2")
+# embedding_function = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
 
 
 def upload_on_vector_db(username : str, file_name:str, collection_name="default"):
+    """ 
+    Upload content of a pdf file in Vector Database as knowledge space of an AI.
+    Args:
+        username (str): To access specific user data
+        file_name (str): To locate exact file
+        collection_name (str, optional): _description_. Defaults to "default".
+    Raises:
+        Exception: user name not found  or collection not found 
+    Returns:
+        Bool:True on success
+    """
     # Loading PDF Document 
     loader = PyPDFLoader(str((FILE_STORE_PATH/username/file_name).resolve()))
     # Splitting documents in pages
@@ -35,8 +48,10 @@ def upload_on_vector_db(username : str, file_name:str, collection_name="default"
     # Extract Text and divide into smaller documents Chunks
     documents_splitter = RecursiveCharacterTextSplitter(chunk_size=1000,chunk_overlap=0)
     documents = documents_splitter.split_documents(pages)
+    print(documents)
     # Chroma DB Client Database Path
     persist_dir = DATABASE_PATH/username
+    print(persist_dir)
     if not persist_dir.exists():
         persist_dir.mkdir(parents=True)
     client = chromadb.PersistentClient(str(persist_dir.resolve()))
@@ -45,20 +60,55 @@ def upload_on_vector_db(username : str, file_name:str, collection_name="default"
     except : 
         raise Exception(f"Collection {collection_name} is exist") 
 
-    langchain_chroma = Chroma( # Langchain Chroma Instance 
-        client=client, collection_name=collection_name,
-        embedding_function=embedding_function )
+    Chroma.from_documents(documents=documents,collection_name=collection_name,
+                    embedding=embedding_function, 
+                    persist_directory=persist_dir.resolve().as_posix())
 
-    langchain_chroma.from_documents(documents, embedding_function)
-
+    
     return True
+
 def get_collection_list(username : str):
+    """ To get all Collection name of a particular user
+    Args:
+        username (str): To fetch Specific User;s Collection
+    Returns:
+        List[str] :  List of name of collections 
+    """
     persist_dir = DATABASE_PATH/username
     client = chromadb.PersistentClient(str(persist_dir.resolve()))
     list_collection = client.list_collections()
     return [collection.name for collection in list_collection]
 
-def get_retriever(username : str, collection:str):
+
+
+def delete_collection(username:str, collection:str):
+    """delete a spesific collection
+    Args:
+        username (str): To fetch User Directory 
+        collection (str): to fetch collection
+    Raises:
+        Exception: Collection Not Found
+        Exception: User Directory Not Found
+    """
+    persist_dir = DATABASE_PATH/username
+    if persist_dir.exists():
+        client = chromadb.PersistentClient(str(persist_dir.resolve()))
+        try:
+            client.create_collection(collection)
+        except Exception as e: 
+            raise Exception("collection Not Found")
+    else: raise Exception("User directory not found")
+def get_answer(question:str,username:str, collection: str):
+    """Make Query of the uploaded file 
+    This function retrieve data from Vector store and pass through a prompt of llm model and retrieve answer. 
+
+    Args:
+        question (str): Question String 
+        username (str): username for select user 
+        collection (str): collection name for select collection 
+    Return : 
+        str : Answer String 
+    """
     persist_dir = DATABASE_PATH/username
     if not persist_dir.exists():
         raise Exception(f"No directorr found as {username} ")
@@ -67,20 +117,14 @@ def get_retriever(username : str, collection:str):
         client.get_collection(collection)
     except:
         raise Exception(f"Collection {collection} not Found with this user {username}")
-    chroma =  Chroma(
-        client=client,
-        collection_name=collection,
-        embedding_function=embedding_function,
-    )
-    return chroma.as_retriever()
 
-def get_answer(question:str,username:str, collection: str):
-   
-    retriever = get_retriever(username,collection)
-
+    chroma = Chroma(persist_directory=persist_dir.resolve().as_posix(), 
+                     embedding_function=embedding_function,
+                     collection_name=collection
+                    )
     ## Retrive content form Document 
-    docs = retriever.get_relevant_documents(question)
-    
+    docs = chroma.similarity_search(question)
+    print(docs)
     # # # Model Selection     
     # model_name = r'models/chat-bison-001'
     model_name = r'models/text-bison-001'
