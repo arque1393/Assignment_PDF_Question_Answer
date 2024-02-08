@@ -9,7 +9,7 @@ from db_setup import get_session, engine
 import db_models
 from config import DATABASE_PATH, FILE_STORE_PATH
 
-from vector_store import upload_on_vector_db, get_answer,get_collection_list
+from vector_store import upload_on_vector_db, get_answer,get_collection_list,delete_collection
 # Creating or updating table structure on User Database
 db_models.Base.metadata.create_all(engine) 
 def save_upload_file(upload_file: UploadFile, destination: Path) -> None:
@@ -56,8 +56,8 @@ async def post_endpoint(user_id:int, session:Session=Depends(get_session), in_fi
     if not dir_location.exists():
         dir_location.mkdir(parents=True)
     save_upload_file(in_file, dir_location/file_name)
+    return {'status':'success'}
     
-    return {"Result": "OK"}
 
 @app.post("/api/user/{user_id}/store")
 async def add_on_vector_db(user_id:int, upload_info:UploadInfo,
@@ -69,9 +69,13 @@ async def add_on_vector_db(user_id:int, upload_info:UploadInfo,
     try:
         if not upload_info.collection_name:
             upload_info.collection_name='default'
-        upload_on_vector_db(username=user_name,file_name=upload_info.file_name,collection_name=upload_info.collection_name)
+        upload_on_vector_db(username=user_name,file_name=upload_info.file_name,
+                            collection_name=upload_info.collection_name)
+        
+        return {'status':'success'}
     except Exception as e:
         raise HTTPException(e)
+    
 @app.get("/api/user/{user_id}/collections")
 async def get_all_collections(user_id:int,session:Session = Depends(get_session)):
     user =  session.query(db_models.User).filter_by(user_id=user_id).first()
@@ -79,12 +83,15 @@ async def get_all_collections(user_id:int,session:Session = Depends(get_session)
         raise HTTPException(status_code=404, detail='User Not Found')  
     user_name = user.username
     return get_collection_list(user_name)
+
 @app.delete("/api/user/{user_id}/{collection}")
-async def delete_collection(user_id:str, collection:str, session:Session = Depends(get_session)):
+async def _delete_collection(user_id:str, collection:str, session:Session = Depends(get_session)):
     user =  session.query(db_models.User).filter_by(user_id=user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail='User Not Found')  
-    delete_collection(username=user.username, collection=collection)
+    delete_collection(user.username, collection)
+    return {'status':'success'}
+    
 @app.post("/api/user/{user_id}/ask/")
 async def ask_question(user_id:int, ask_info:AskInfo,
                     session:Session = Depends(get_session)) :

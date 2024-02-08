@@ -94,7 +94,7 @@ def delete_collection(username:str, collection:str):
     if persist_dir.exists():
         client = chromadb.PersistentClient(str(persist_dir.resolve()))
         try:
-            client.create_collection(collection)
+            client.delete_collection(collection)
         except Exception as e: 
             raise Exception("collection Not Found")
     else: raise Exception("User directory not found")
@@ -120,8 +120,7 @@ def get_answer(question:str,username:str, collection: str):
 
     chroma = Chroma(persist_directory=persist_dir.resolve().as_posix(), 
                      embedding_function=embedding_function,
-                     collection_name=collection
-                    )
+                     collection_name=collection)
     ## Retrive content form Document 
     docs = chroma.similarity_search(question)
     print(docs)
@@ -133,7 +132,7 @@ def get_answer(question:str,username:str, collection: str):
     # model_name = r'models/aqa'
 
     llm = GoogleGenerativeAI(model=model_name, google_api_key=GOOGLE_API_KEY)
-    llm.invoke("Hello how are you ?")
+    # llm.invoke("Hello how are you ?")
 
     #  Question Answer Prompt Template 
     prompt_template = PromptTemplate.from_template('''
