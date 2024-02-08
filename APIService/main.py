@@ -32,6 +32,10 @@ def save_upload_file(upload_file: UploadFile, destination: Path) -> None:
         upload_file.file.close()
         
 app = FastAPI()
+@app.get("/")
+async def root():
+    return {"message":"Check Docs for test API"}
+
 @app.post("/api/user", response_model=UserShow)
 async def create_user(usr:User, session:Session = Depends(get_session)):
     existing_object = session.query(db_models.User).filter_by(username=usr.username).first()

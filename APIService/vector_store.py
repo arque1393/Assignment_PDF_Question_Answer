@@ -123,7 +123,7 @@ def get_answer(question:str,username:str, collection: str):
                      collection_name=collection)
     ## Retrive content form Document 
     docs = chroma.similarity_search(question)
-    print(docs)
+
     # # # Model Selection     
     # model_name = r'models/chat-bison-001'
     model_name = r'models/text-bison-001'
