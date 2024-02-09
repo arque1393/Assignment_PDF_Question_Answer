@@ -16,7 +16,7 @@ import google.generativeai as genai
 import chromadb 
 import os 
 
-from config import DATABASE_PATH,FILE_STORE_PATH
+from config import DATABASE_PATH
 
 #GOOGLE_API_KEY = os.environ.get('GOOGLE_API_KEY')
 GOOGLE_API_KEY = os.getenv('GOOGLE_API_KEY')
@@ -28,8 +28,25 @@ genai.configure(api_key=GOOGLE_API_KEY)
 embedding_function = SentenceTransformerEmbeddings(model_name="all-MiniLM-L6-v2")
 # embedding_function = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
 
+# # # Model Selection     
+# model_name = r'models/chat-bison-001'
+model_name = r'models/text-bison-001'
+# model_name = r'models/gemini-pro'
+# model_name = r'models//gemini-pro-version'
+# model_name = r'models/aqa'
 
-def upload_on_vector_db(username : str, file_name:str, collection_name="default"):
+llm = GoogleGenerativeAI(model=model_name, google_api_key=GOOGLE_API_KEY)
+# llm.invoke("Hello how are you ?")
+
+#  Question Answer Prompt Template 
+prompt_template = PromptTemplate.from_template('''
+This is some information for your knoledge:
+{knowledge}\n\n
+Answer the given question from the previous content.
+Question : {question}''')
+
+
+def upload_on_vector_db(file_path:Path,collection_name:str):
     """ 
     Upload content of a pdf file in Vector Database as knowledge space of an AI.
     Args:
@@ -42,16 +59,18 @@ def upload_on_vector_db(username : str, file_name:str, collection_name="default"
         Bool:True on success
     """
     # Loading PDF Document 
-    loader = PyPDFLoader(str((FILE_STORE_PATH/username/file_name).resolve()))
+    if not file_path.exists():
+        raise Exception("File Path not exist")
+   
+    loader = PyPDFLoader(str(file_path.resolve()))
     # Splitting documents in pages
     pages = loader.load_and_split()
     # Extract Text and divide into smaller documents Chunks
     documents_splitter = RecursiveCharacterTextSplitter(chunk_size=1000,chunk_overlap=0)
     documents = documents_splitter.split_documents(pages)
-    print(documents)
     # Chroma DB Client Database Path
-    persist_dir = DATABASE_PATH/username
-    print(persist_dir)
+    persist_dir = DATABASE_PATH
+   
     if not persist_dir.exists():
         persist_dir.mkdir(parents=True)
     client = chromadb.PersistentClient(str(persist_dir.resolve()))
@@ -67,38 +86,8 @@ def upload_on_vector_db(username : str, file_name:str, collection_name="default"
     
     return True
 
-def get_collection_list(username : str):
-    """ To get all Collection name of a particular user
-    Args:
-        username (str): To fetch Specific User;s Collection
-    Returns:
-        List[str] :  List of name of collections 
-    """
-    persist_dir = DATABASE_PATH/username
-    client = chromadb.PersistentClient(str(persist_dir.resolve()))
-    list_collection = client.list_collections()
-    return [collection.name for collection in list_collection]
 
-
-
-def delete_collection(username:str, collection:str):
-    """delete a spesific collection
-    Args:
-        username (str): To fetch User Directory 
-        collection (str): to fetch collection
-    Raises:
-        Exception: Collection Not Found
-        Exception: User Directory Not Found
-    """
-    persist_dir = DATABASE_PATH/username
-    if persist_dir.exists():
-        client = chromadb.PersistentClient(str(persist_dir.resolve()))
-        try:
-            client.delete_collection(collection)
-        except Exception as e: 
-            raise Exception("collection Not Found")
-    else: raise Exception("User directory not found")
-def get_answer(question:str,username:str, collection: str):
+def get_answer(question:str, collection: str):
     """Make Query of the uploaded file 
     This function retrieve data from Vector store and pass through a prompt of llm model and retrieve answer. 
 
@@ -108,41 +97,25 @@ def get_answer(question:str,username:str, collection: str):
         collection (str): collection name for select collection 
     Return : 
         str : Answer String 
-    """
-    persist_dir = DATABASE_PATH/username
-    if not persist_dir.exists():
-        raise Exception(f"No directorr found as {username} ")
-    client = chromadb.PersistentClient(str(persist_dir.resolve()))
+    """        
+    client = chromadb.PersistentClient(str(DATABASE_PATH.resolve()))
     try:
         client.get_collection(collection)
     except:
-        raise Exception(f"Collection {collection} not Found with this user {username}")
+        raise Exception(f"Collection {collection} not Found")
 
-    chroma = Chroma(persist_directory=persist_dir.resolve().as_posix(), 
+    chroma = Chroma(persist_directory=DATABASE_PATH.resolve().as_posix(), 
                      embedding_function=embedding_function,
                      collection_name=collection)
     ## Retrive content form Document 
     docs = chroma.similarity_search(question)
-
-    # # # Model Selection     
-    # model_name = r'models/chat-bison-001'
-    model_name = r'models/text-bison-001'
-    # model_name = r'models/gemini-pro'
-    # model_name = r'models//gemini-pro-version'
-    # model_name = r'models/aqa'
-
-    llm = GoogleGenerativeAI(model=model_name, google_api_key=GOOGLE_API_KEY)
-    # llm.invoke("Hello how are you ?")
-
-    #  Question Answer Prompt Template 
-    prompt_template = PromptTemplate.from_template('''
-This is some information for your knoledge:
-{knowledge}\n\n
-Answer the given question from the previous content.
-Question : {question}''')
+    print(docs)
+ 
     ## Define Dara Retrival Chain from Prompt template and llm models 
     chain = prompt_template | llm     
     answer = chain.invoke(
         {'knowledge':' '.join([page.page_content for page in docs]),
         'question':question})
     return answer
+
+print(DATABASE_PATH)
