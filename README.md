@@ -27,23 +27,19 @@ Finally Integrate all with the FastAPI App and create a backend app
         2. calling llm to get answer 
 
 ### Fast API end points :
-      POST : http:/localhost/api/user
-        Create User 
+      POST : http:/localhost/api/upload_pdf
+        Accept PDF file Location 
+        Accpet PDF name 
+        Perform  storage Operation. store the data in VectorDB  from PDF 
+        Return True on success 
 
-      POST : http:/localhost/api/user/{user_id}/upload_pdf
-        upload PDF file for specific user
+      POST : http:/localhost/ask/pdf
+        Accept PDF name with extension( Ex: "Something.pdf")
+        Accept Question 
+        Perform  retrieval task. Search in Vector Store and using that generate response 
+        Return Answer of the question  
 
-      POST : http:/localhost/api/user/{user_id}/store
-        Store PDF file content in collection
-
-       GET : http:/localhost/api/user/{user_id}/collections
-        get list of collection name for specific user 
-
-    DELETE : http:/localhost/api/user/{user_id}/{collection}
-        Delete Specific collection for specific 
-
-      POST : http:/localhost/api/user/{user_id}/collections
-        Ask question from specific collection for specific user 
+      
 
 ### Models I explored 
 - Embedding Models 
@@ -57,3 +53,5 @@ Finally Integrate all with the FastAPI App and create a backend app
     - models/aqa        (Google)
 
 
+# Note : 
+**Please Visit the modified Branch of this repo I have make some changes on functionality to make the system Better**
