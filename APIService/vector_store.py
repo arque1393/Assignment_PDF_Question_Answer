@@ -50,11 +50,10 @@ def upload_on_vector_db(file_path:Path,collection_name:str):
     """ 
     Upload content of a pdf file in Vector Database as knowledge space of an AI.
     Args:
-        username (str): To access specific user data
-        file_name (str): To locate exact file
+        file_path (str): To locate exact file
         collection_name (str, optional): _description_. Defaults to "default".
     Raises:
-        Exception: user name not found  or collection not found 
+        Exception: collection not found 
     Returns:
         Bool:True on success
     """
@@ -92,8 +91,7 @@ def get_answer(question:str, collection: str):
     This function retrieve data from Vector store and pass through a prompt of llm model and retrieve answer. 
 
     Args:
-        question (str): Question String 
-        username (str): username for select user 
+        question (str): Question String        
         collection (str): collection name for select collection 
     Return : 
         str : Answer String 
